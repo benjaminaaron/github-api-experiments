@@ -3,11 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <title>GitHub API Experiments</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 </head>
 <body>
 
 <script>
-    // ...
+
+    let orgaName = "";
+    let paginationLimit = 30;
+    let repoNames = [];
+
+    function getRepoNames() {
+        $.ajax({
+            url: "https://api.github.com/orgs/" + orgaName,
+            type: "get",
+            success: function (response) {
+                let repoCount = response.public_repos;
+                let pages = Math.ceil(repoCount / paginationLimit);
+                getRepoNamesFromOnePage(1, pages, callbackRepoNamesRetrieved);
+            },
+            error: function (xhr) {
+            }
+        });
+    }
+
+    function getRepoNamesFromOnePage(currPage, maxPage, callbackDone) {
+        $.ajax({
+            url: "https://api.github.com/orgs/" + orgaName + "/repos",
+            type: "get",
+            data: {
+                type: "public",
+                page: currPage
+            },
+            success: function(response) {
+                for (var i = 0; i < response.length; i++) {
+                    repoNames.push(response[i].name);
+                }
+                if (currPage < maxPage) {
+                    getRepoNamesFromOnePage(currPage + 1, maxPage, callbackDone);
+                } else {
+                    callbackDone();
+                }
+            },
+            error: function(xhr) {}
+        });
+    }
+
+    getRepoNames();
+
+    function callbackRepoNamesRetrieved() {
+        console.log(repoNames);
+    }
+
+    function getContributorsOfRepo(repoName) {
+        $.ajax({
+            url: "https://api.github.com/repos/" + orgaName + "/" + repoName + "/contributors",
+            type: "get",
+            data: {},
+            success: function(response) {},
+            error: function(xhr) {}
+        });
+    }
+
 </script>
 
 </body>
