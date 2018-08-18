@@ -10,59 +10,66 @@
 <script>
 
     let orgaName = "";
-    let paginationLimit = 30;
-    let repoNames = [];
 
-    function getRepoNames() {
+    /*function getOrgaInfo() {
         $.ajax({
             url: "https://api.github.com/orgs/" + orgaName,
             type: "get",
             success: function (response) {
                 let repoCount = response.public_repos;
                 let pages = Math.ceil(repoCount / paginationLimit);
-                getRepoNamesFromOnePage(1, pages, callbackRepoNamesRetrieved);
             },
             error: function (xhr) {
             }
         });
-    }
+    }*/
 
-    function getRepoNamesFromOnePage(currPage, maxPage, callbackDone) {
+    function getListByCollectingAllPages(url, list, currPage, callback) {
         $.ajax({
-            url: "https://api.github.com/orgs/" + orgaName + "/repos",
+            url: url,
             type: "get",
             data: {
-                type: "public",
                 page: currPage
             },
             success: function(response) {
-                for (var i = 0; i < response.length; i++) {
-                    repoNames.push(response[i].name);
-                }
-                if (currPage < maxPage) {
-                    getRepoNamesFromOnePage(currPage + 1, maxPage, callbackDone);
+                if (response.length > 0) {
+                    for (var i = 0; i < response.length; i++) {
+                        list.push(response[i]);
+                    }
+                    getListByCollectingAllPages(url, list, currPage + 1, callback);
                 } else {
-                    callbackDone();
+                    callback();
                 }
             },
             error: function(xhr) {}
         });
     }
 
-    getRepoNames();
+    let repoList = [];
+    let repoMap = {};
+    getListByCollectingAllPages("https://api.github.com/orgs/" + orgaName + "/repos", repoList, 1, callbackRepoRetrieved);
 
-    function callbackRepoNamesRetrieved() {
-        console.log(repoNames);
-    }
+    let contributorMap = {};
+    let contributorToRepoMap = {};
 
-    function getContributorsOfRepo(repoName) {
-        $.ajax({
-            url: "https://api.github.com/repos/" + orgaName + "/" + repoName + "/contributors",
-            type: "get",
-            data: {},
-            success: function(response) {},
-            error: function(xhr) {}
-        });
+    function callbackRepoRetrieved() {
+        for (let i = 0; i < repoList.length; i++) {
+            let repoName = repoList[i].name;
+            repoMap[repoList[i].name] = repoList[i];
+
+            let contributorList = [];
+
+            getListByCollectingAllPages("https://api.github.com/repos/" + orgaName + "/" + repoName + "/contributors", contributorList, 1, function () {
+                for (let i = 0; i < contributorList.length; i++) {
+                    let contributorLogin = contributorList[i].login;
+                    if (!contributorMap[contributorLogin]) {
+                        contributorMap[contributorLogin] = contributorList[i];
+                        contributorToRepoMap[contributorLogin] = [];
+                    }
+                    contributorToRepoMap[contributorLogin].push(repoName);
+                }
+            });
+        }
     }
 
 </script>
